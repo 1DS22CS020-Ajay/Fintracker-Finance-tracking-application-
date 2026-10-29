@@ -1,0 +1,13 @@
+.custom-button {
+  color: white;
+  font-family: "Oswald";
+  border: 5px solid transparent;
+  font-size: 15px;
+  transition: color 0.3s ease, font-size 0.3s ease;
+  cursor: pointer;
+}
+
+.custom-button:hover {
+  color: rgb(99, 141, 248);
+  font-size: 18px;
+}

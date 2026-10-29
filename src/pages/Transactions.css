@@ -1,0 +1,10 @@
+.add-transaction-btn{
+   background-color : #638DF8;
+   color : "white";
+   transition : background-color 0.3s ease, color 0.3s ease;
+}
+
+.add-transaction-btn:hover{
+    background-color: #093FC8;
+    color : white;
+}
