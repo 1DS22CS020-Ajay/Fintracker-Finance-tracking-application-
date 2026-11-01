@@ -2,34 +2,47 @@ import React from 'react'
 import Custombutton from './Custombutton'
 import { useNavigate, useLocation } from 'react-router-dom';
 
+const menuItems = [
+  { label: 'Dashboard', path: '/dashboard' },
+  { label: 'Transactions', path: '/transactions' },
+  { label: 'Budgets', path: '/budgets' },
+  { label: 'Analytics', path: '/analytics' },
+  { label: 'Settings', path: '/settings' },
+];
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const menuItems = [
-    { label: 'Dashboard',path : '/dashboard'},
-    { label: 'Transactions',path : '/transactions'},
-    { label: 'Budgets',path : '/budgets'},
-    { label: 'Analytics',path : '/analytics'},
-    { label: 'Settings',path : '/settings'},
-  ];
   return (
-    <>
-    <div className = "sidebar" style = {{display : "flex", flexDirection : "column", alignItems : "center", padding : 30, backgroundColor : "#093FC8",borderRadius : 10, height : "100vw", color : "white",width : 100, fontFamily : "Oswald"}}>
-        {menuItems.map((item)=>(
-        <React.Fragment key = {item.path}>
-          <Custombutton
-            bg = "#093FC8"
-            function = {()=>navigate(item.path)}
-          >
-            {item.label}
-            </Custombutton>
-            <br/>  
-        </React.Fragment>
+    <nav
+      className="sidebar"
+      aria-label="Main navigation"
+      style={{
+        position: "sticky",
+        top: 64,
+        flex: "0 0 210px",
+        boxSizing: "border-box",
+        height: "calc(100vh - 64px)",
+        padding: "20px 12px",
+        backgroundColor: "#093FC8",
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+        fontFamily: "Oswald",
+      }}
+    >
+      {menuItems.map((item) => (
+        <Custombutton
+          key={item.path}
+          variant="nav"
+          active={location.pathname === item.path}
+          function={() => navigate(item.path)}
+        >
+          {item.label}
+        </Custombutton>
       ))}
-    </div>
-    </>
+    </nav>
   )
 }
 

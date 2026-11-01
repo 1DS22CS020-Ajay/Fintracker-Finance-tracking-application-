@@ -1,135 +1,181 @@
-import React from 'react'
-import { useState,useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 import Statcard from '../components/Statcard'
 import TransactionItem from '../components/TransactionItem'
 import { apiRequest } from "../api/api.js"
 
-const Dashboard = () => {
-  const username = localStorage.getItem("username") || "User";
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [period, setPeriod] = useState("month");
-
-useEffect(()=>{
-  const fetchTransactions = async () => {
-    try{
-      setError("");
-      const data = await apiRequest("/transactions/all");
-      setTransactions(data.transactions ?? []);
-    }catch(err){
-      setError(err.message ||  "Failed to fetch transactions.");
-    }finally{
-      setLoading(false);
-    }
-  };
-
-  fetchTransactions();
-},[]);
-
-
+const PERIODS = [
+  { key: "month", label: "1 Month", summary: "this month" },
+  { key: "sixMonths", label: "6 Months", summary: "the last 6 months" },
+  { key: "year", label: "1 Year", summary: "this year" },
+]
 
 const getGreeting = () => {
-  const hour = new Date().getHours();
-
-  if(hour >= 6 && hour < 12){
-    return "Good morning"
-  }else if(hour >= 12 && hour < 17){
-    return "Good afternoon"
-  }else if(hour >= 17 && hour < 21){
-    return "Good evening"
-  }else{
-    return "Good night"
-  }
-
+  const hour = new Date().getHours()
+  if (hour >= 6 && hour < 12) return "Good morning"
+  if (hour >= 12 && hour < 17) return "Good afternoon"
+  if (hour >= 17 && hour < 21) return "Good evening"
+  return "Good night"
 }
 
-const now = new Date();
+const formatCurrency = (value) =>
+  Number(value).toLocaleString("en-IN", { maximumFractionDigits: 2 })
 
-const startDate = new Date(
-  now.getFullYear(),
-  now.getMonth(),
-  1
-);
-
-if ( period === "sixMonths"){
-  startDate.setMonth(startDate.getMonth() - 5);
-}else if( period === "year"){
-  startDate.setMonth(0);
+const panelStyle = {
+  marginTop: 24,
+  backgroundColor: "white",
+  border: "1px solid #DFE6F7",
+  borderRadius: 12,
+  overflow: "hidden",
 }
 
-const filteredTransactions = transactions.filter((transaction) => {
-  const transactionDate = new Date(transaction.date);
+const panelHeaderStyle = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "16px 22px",
+  borderBottom: "1px solid #DFE6F7",
+}
 
-  return (
-    !Number.isNaN(transactionDate.getTime()) && transactionDate >= startDate && transactionDate <= now 
-  );
+const panelTitleStyle = { margin: 0, fontFamily: "Oswald", fontSize: 20, fontWeight: 500, color: "#16213A" }
+
+const periodButtonStyle = (active) => ({
+  padding: "8px 16px",
+  border: "none",
+  borderRadius: 7,
+  backgroundColor: active ? "#093FC8" : "transparent",
+  color: active ? "white" : "#093FC8",
+  fontFamily: "Oswald",
+  fontSize: 15,
+  cursor: "pointer",
 })
 
-const income = filteredTransactions.reduce((total, transaction) => {
-  return transaction.type?.toLowerCase() === "income" ? total + Number(transaction.amount) : total;
-}, 0);
+const Dashboard = () => {
+  const navigate = useNavigate()
+  const username = localStorage.getItem("username") || "User"
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [period, setPeriod] = useState("month")
 
-const expenses = filteredTransactions.reduce((total, transaction) => {
-  return transaction.type?.toLowerCase() === "expense" ?  total + Number(transaction.amount) : total;
-}, 0);
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setError("")
+        const data = await apiRequest("/transactions/all")
+        setTransactions(data.transactions ?? [])
+      } catch (err) {
+        setError(err.message || "Failed to fetch transactions.")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchTransactions()
+  }, [])
 
-const savings = income - expenses;
+  const now = new Date()
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+  if (period === "sixMonths") startDate.setMonth(startDate.getMonth() - 5)
+  else if (period === "year") startDate.setMonth(0)
 
-const formatCurrency = (value) => 
-  Number(value).toLocaleString("en-IN", {
-    maximumFractionDigits : 2,
-  });
+  const filteredTransactions = transactions.filter((t) => {
+    const d = new Date(t.date)
+    return !Number.isNaN(d.getTime()) && d >= startDate && d <= now
+  })
 
-    
+  const sumByType = (type) =>
+    filteredTransactions.reduce(
+      (total, t) => (t.type?.toLowerCase() === type ? total + Number(t.amount) : total),
+      0
+    )
+
+  const income = sumByType("income")
+  const expenses = sumByType("expense")
+  const savings = income - expenses
+
+  const recent = [...transactions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 3)
+
+  const activePeriod = PERIODS.find((p) => p.key === period)
+
   return (
-    <div>
-      <Navbar/>
-      <div style = {{display : "flex"}}>
-        <Sidebar/>
-        <div style = {{marginLeft : 20}}>
-          <h1 style = {{color : "black",fontFamily : "Oswald"}}>{getGreeting()},{username}</h1>
-          <div style = {{display :"flex",justifyContent : "flex-end",gap : 10,marginTop : 20,marginBottom : 20,flexWrap : "wrap"}}>
-            <button onClick = {() => setPeriod("month")} style = {periodButtonStyle(period === "month")}>1 Month</button>
-            <button onClick = {() => setPeriod("sixMonths")} style = {periodButtonStyle(period === "sixMonths")}>6 Months</button>
-            <button onClick = {() => setPeriod("year")} style = {periodButtonStyle(period === "year")}>1 Year</button>
+    <div style={{ minHeight: "100vh", backgroundColor: "#F5F8FF", color: "#16213A", fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" }}>
+      <Navbar />
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
+        <Sidebar />
+        <main style={{ flex: 1, minWidth: 0, maxWidth: 1100, margin: "0 auto", padding: "28px 32px 48px", boxSizing: "border-box" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
+            <div>
+              <h1 style={{ margin: 0, fontFamily: "Oswald", fontSize: 32, fontWeight: 600 }}>
+                {getGreeting()}, {username}
+              </h1>
+              <p style={{ margin: "4px 0 0", color: "#5B6785", fontSize: 15 }}>
+                Your income, spending and savings for {activePeriod.summary}.
+              </p>
+            </div>
+            <div role="group" aria-label="Select time period" style={{ display: "inline-flex", gap: 4, padding: 4, backgroundColor: "white", border: "1px solid #DFE6F7", borderRadius: 10 }}>
+              {PERIODS.map((p) => (
+                <button key={p.key} onClick={() => setPeriod(p.key)} aria-pressed={period === p.key} style={periodButtonStyle(period === p.key)}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
-          {error && <p style = {{ color : "red"}}>{error}</p>}
-          {loading ? (<p>Loading financial summary...</p>) : (
-            <div style = {{display : "flex",justifyContent : "space-between",gap : 20,marginTop : 20,flexWrap : "wrap"}}>
-              <Statcard title = "Income" value = {formatCurrency(income)}/>
-              <Statcard title = "Expense" value = {formatCurrency(expenses)}/>
-              <Statcard title = "Savings" value = {formatCurrency(savings)}/>
-            </div>  
+
+          {error && (
+            <div role="alert" style={{ marginBottom: 16, padding: "12px 16px", borderRadius: 8, backgroundColor: "#FEF2F2", border: "1px solid #FECACA", color: "#B91C1C" }}>
+              {error}
+            </div>
           )}
-        <div style = {{width : 850, height : 500,border : "1px dotted black",marginTop : 20}}>
-           <h4>[chart]</h4>
-        </div>
-        <br/>
-        <h2 style = {{color : "black",fontFamily : "Oswald"}}>Recent Transactions</h2>
-        <div style = {{border : "1px solid black",width : 1000}}></div>
-        <div>
-          {[...transactions].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,3).map((t)=>(
-            <TransactionItem key = {t.id} item = {t.description} amount = {t.amount}/>
-          ))}
-        </div>
-        </div>
+
+          {loading ? (
+            <p style={{ color: "#5B6785" }}>Loading financial summary...</p>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
+              <Statcard title="Income" value={formatCurrency(income)} />
+              <Statcard title="Expense" value={formatCurrency(expenses)} />
+              <Statcard title="Savings" value={formatCurrency(savings)} highlight negative={savings < 0} />
+            </div>
+          )}
+
+          <section style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <h2 style={panelTitleStyle}>Spending overview</h2>
+            </div>
+            <div style={{ display: "grid", placeItems: "center", height: 320, padding: 20, backgroundColor: "#EEF3FF", color: "#5B6785", textAlign: "center" }}>
+              <p>Your chart will appear here.</p>
+            </div>
+          </section>
+
+          <section style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <h2 style={panelTitleStyle}>Recent transactions</h2>
+              <button
+                onClick={() => navigate("/transactions")}
+                style={{ border: "none", background: "none", color: "#093FC8", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                View all
+              </button>
+            </div>
+            {recent.length === 0 ? (
+              <p style={{ margin: 0, padding: "28px 22px", color: "#5B6785" }}>
+                No transactions yet. Add your first one from the Transactions page.
+              </p>
+            ) : (
+              <div style={{ padding: "16px 22px 6px" }}>
+                {recent.map((t) => (
+                  <TransactionItem key={t.id} item={t.description} amount={t.amount} date={t.date} category={t.category} />
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
       </div>
     </div>
   )
 }
-
-const periodButtonStyle = (active) => ({
-  backgroundColor: active ? "#093FC8" : "white",
-  color: active ? "white" : "#093FC8",
-  border : "1px solid #093FC8",
-  borderRadius : 6,
-  padding : "10px 18px",
-  cursor : "pointer",
-  fontFamily : "Oswald",
-  fontSize : 16
-})
 
 export default Dashboard
