@@ -5,6 +5,14 @@ import Sidebar from '../components/Sidebar'
 import Statcard from '../components/Statcard'
 import TransactionItem from '../components/TransactionItem'
 import { apiRequest } from "../api/api.js"
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+} from "recharts"
 
 const PERIODS = [
   { key: "month", label: "1 Month", summary: "this month" },
@@ -93,6 +101,24 @@ const Dashboard = () => {
 
   const income = sumByType("income")
   const expenses = sumByType("expense")
+  const categoryTotals = {}
+
+filteredTransactions.forEach((t) => {
+  if (t.type?.toLowerCase() !== "expense") return
+
+  const category = t.category || "Others"
+  categoryTotals[category] =
+    (categoryTotals[category] || 0) + Number(t.amount)
+})
+
+const categoryChartData = Object.entries(categoryTotals)
+  .map(([name, value]) => ({ name, value }))
+  .sort((a, b) => b.value - a.value)
+
+const chartColors = [
+  "#093FC8", "#638DF8", "#16AD4A", "#F59E0B",
+  "#DC2626", "#9333EA", "#0891B2", "#64748B",
+]
   const savings = income - expenses
 
   const recent = [...transactions]
@@ -145,9 +171,38 @@ const Dashboard = () => {
             <div style={panelHeaderStyle}>
               <h2 style={panelTitleStyle}>Spending overview</h2>
             </div>
-            <div style={{ display: "grid", placeItems: "center", height: 320, padding: 20, backgroundColor: "#EEF3FF", color: "#5B6785", textAlign: "center" }}>
-              <p>Your chart will appear here.</p>
-            </div>
+            <div style={{ height: 320, padding: 20 }}>
+  {categoryChartData.length === 0 ? (
+    <p style={{ color: "#5B6785" }}>
+      No expense transactions for this period.
+    </p>
+  ) : (
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={categoryChartData}
+          dataKey="value"
+          nameKey="name"
+          cx="50%"
+          cy="50%"
+          outerRadius={105}
+          label={({ name, percent }) =>
+            `${name} ${(percent * 100).toFixed(0)}%`
+          }
+        >
+          {categoryChartData.map((entry, index) => (
+            <Cell
+              key={entry.name}
+              fill={chartColors[index % chartColors.length]}
+            />
+          ))}
+        </Pie>
+        <Tooltip formatter={(value) => formatCurrency(value)} />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  )}
+</div>
           </section>
 
           <section style={panelStyle}>
